@@ -1,0 +1,1399 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "fe765875",
+   "metadata": {},
+   "source": [
+    "# 🐍 Resumo de POO para a Prova\n",
+    "### Programação Orientada a Objetos em Python — teoria + código executável\n",
+    "\n",
+    "**Como usar este notebook:** leia a célula de teoria e rode a célula de código logo abaixo\n",
+    "(`Shift+Enter`). Os resultados já estão salvos, então dá para estudar só lendo — mas rodar\n",
+    "ajuda a fixar.\n",
+    "\n",
+    "---\n",
+    "\n",
+    "### Sumário\n",
+    "\n",
+    "| # | Tópico | Ideia central em 1 linha |\n",
+    "|---|--------|--------------------------|\n",
+    "| 1 | Introdução à POO e Abstração | Classe = molde; objeto = instância materializada |\n",
+    "| 2 | Construtores (`__new__` / `__init__`) | `__new__` aloca, `__init__` inicializa |\n",
+    "| 3 | Encapsulamento e Modificadores | `public`, `_protected`, `__private` + `@property` |\n",
+    "| 4 | Atributos de classe, `@classmethod`, `@staticmethod` | Estado compartilhado x utilitários |\n",
+    "| 5 | Relacionamentos | Agregação (losango aberto) x Composição (losango fechado) |\n",
+    "| 6 | Herança e Problema do Diamante | Herança múltipla resolvida pelo MRO |\n",
+    "| 7 | Polimorfismo e Injeção de Dependência | Mesma chamada, comportamentos diferentes; menos acoplamento |\n",
+    "| 8 | Classes e Métodos Abstratos | Contrato que não pode ser instanciado (`abc`) |\n",
+    "| 9 | Cola rápida / pegadinhas | Dunders, armadilhas clássicas de prova |\n",
+    "| 10 | Simulado com gabarito | 10 questões para se testar |"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7f68d3ec",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## 1. Introdução à POO e Abstração\n",
+    "\n",
+    "**Abstração** = isolar as características essenciais de um elemento do mundo real para levar\n",
+    "para o código (ignorar o que não importa para o problema).\n",
+    "\n",
+    "- **Classe** → estrutura que serve de *molde/especificação*. Define:\n",
+    "  - **Atributos**: os estados (dados) do objeto.\n",
+    "  - **Métodos**: os comportamentos (ações) do objeto.\n",
+    "- **Objeto** → a *instância* da classe, criada em **tempo de execução**.\n",
+    "  Todos os objetos de uma mesma classe têm a **mesma estrutura** (mesmos atributos e métodos),\n",
+    "  mas cada um guarda os **seus próprios valores**.\n",
+    "\n",
+    "No UML, a classe é desenhada como um retângulo dividido em 3 partes: **nome | atributos | métodos**."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "cac94069",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.497270Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.496885Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.503099Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.502348Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Oi, sou Ana e tenho 22 anos.\n",
+      "Oi, sou Bruno e tenho 30 anos.\n",
+      "---\n",
+      "p1 é instância de Pessoa? True\n",
+      "p1 e p2 são o MESMO objeto? False (mesma estrutura, valores diferentes)\n",
+      "id(p1) = 2146907212160 | id(p2) = 2146908151056\n",
+      "estado de p1: {'nome': 'Ana', 'idade': 22}\n",
+      "estado de p2: {'nome': 'Bruno', 'idade': 30}\n"
+     ]
+    }
+   ],
+   "source": [
+    "class Pessoa:\n",
+    "    def __init__(self, nome, idade):\n",
+    "        self.nome = nome        # atributo de instância\n",
+    "        self.idade = idade\n",
+    "\n",
+    "    def apresentar(self):       # método de instância\n",
+    "        return f\"Oi, sou {self.nome} e tenho {self.idade} anos.\"\n",
+    "\n",
+    "\n",
+    "p1 = Pessoa(\"Ana\", 22)\n",
+    "p2 = Pessoa(\"Bruno\", 30)\n",
+    "\n",
+    "print(p1.apresentar())\n",
+    "print(p2.apresentar())\n",
+    "\n",
+    "print(\"---\")\n",
+    "print(\"p1 é instância de Pessoa?\", isinstance(p1, Pessoa))\n",
+    "print(\"p1 e p2 são o MESMO objeto?\", p1 is p2, \"(mesma estrutura, valores diferentes)\")\n",
+    "print(\"id(p1) =\", id(p1), \"| id(p2) =\", id(p2))\n",
+    "print(\"estado de p1:\", p1.__dict__)\n",
+    "print(\"estado de p2:\", p2.__dict__)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "340267f9",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## 2. Construtores: `__new__` e `__init__`\n",
+    "\n",
+    "O ciclo de vida de um objeto em Python tem duas etapas:\n",
+    "\n",
+    "| Etapa | Método | Papel |\n",
+    "|-------|--------|-------|\n",
+    "| 1 | `__new__(cls, ...)` | **Aloca o espaço em memória** e devolve a nova instância. Recebe a **classe** (`cls`). |\n",
+    "| 2 | `__init__(self, ...)` | **Inicializa os atributos** da instância já criada. Recebe o **objeto** (`self`). |\n",
+    "\n",
+    "- Quem chama o `__new__` é o próprio Python; ele quem *evoca* o `__init__`.\n",
+    "- Na prática você quase sempre só escreve o `__init__`. O `__new__` só é necessário em casos\n",
+    "  especiais (tipos imutáveis, *singleton*, cache de objetos...).\n",
+    "- O `__init__` pode receber parâmetros **com ou sem valor padrão**.\n",
+    "- Atenção: `__init__` **não é o criador** do objeto — ele só configura algo que já existe."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "id": "bb40fd18",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.505175Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.504962Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.508993Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.508387Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "1) __new__  -> alocando memória\n",
+      "2) __init__ -> inicializando atributos\n",
+      "objeto pronto: 10\n"
+     ]
+    }
+   ],
+   "source": [
+    "class Exemplo:\n",
+    "    def __new__(cls, *args, **kwargs):\n",
+    "        _ = args, kwargs                 # aceita argumentos para repassá-los ao __init__\n",
+    "        print(\"1) __new__  -> alocando memória\")\n",
+    "        instancia = super().__new__(cls)     # delega para o __new__ de object\n",
+    "        return instancia\n",
+    "\n",
+    "    def __init__(self, valor):\n",
+    "        print(\"2) __init__ -> inicializando atributos\")\n",
+    "        self.valor = valor\n",
+    "\n",
+    "\n",
+    "obj = Exemplo(10)\n",
+    "print(\"objeto pronto:\", obj.valor)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "4c378ad0",
+   "metadata": {},
+   "source": [
+    "**`__init__` com valores padrão** (parametrizável, mas opcional na criação):"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "a5a1f5a1",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.510899Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.510751Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.514802Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.514217Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Fulano | TADS               | 0.0\n",
+      "Beltrano | TSI                | 0.0\n",
+      "Siclano | TADS               | 9.5\n"
+     ]
+    }
+   ],
+   "source": [
+    "class Aluno:\n",
+    "    def __init__(self, nome, curso=\"TADS\", nota=0.0):\n",
+    "        self.nome = nome\n",
+    "        self.curso = curso\n",
+    "        self.nota = nota\n",
+    "\n",
+    "\n",
+    "a1 = Aluno(\"Fulano\")                              # usa todos os padrões\n",
+    "a2 = Aluno(\"Beltrano\", \"TSI\")        # troca só o curso\n",
+    "a3 = Aluno(\"Siclano\", nota=9.5)                  # usa argumento nomeado\n",
+    "\n",
+    "for a in (a1, a2, a3):\n",
+    "    print(f\"{a.nome:<6} | {a.curso:<18} | {a.nota}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "82deff69",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## 3. Encapsulamento e Modificadores de Acesso\n",
+    "\n",
+    "Encapsulamento = esconder o estado interno e expor só o necessário, protegendo o objeto de\n",
+    "alterações indevidas (mantendo a lógica de validação **oculta** para quem usa a classe).\n",
+    "\n",
+    "| Modificador | Sintaxe | Acesso |\n",
+    "|-------------|---------|--------|\n",
+    "| Público | `self.nome` | livre, de qualquer lugar |\n",
+    "| Protegido | `self._nome` | própria classe e **subclasses** (convenção) |\n",
+    "| Privado | `self.__nome` | somente dentro da própria classe |\n",
+    "\n",
+    "⚠️ Em Python nada disso é imposto pelo compilador: `_` e `__` são **convenções** e o `__`\n",
+    "sofre **name mangling** (o atributo vira `_Classe__atributo`). A ideia é: \"não encoste, isso é\n",
+    "detalhe interno\"."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "id": "146c7f8b",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.516558Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.516420Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.521101Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.520470Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "público : Ana\n",
+      "protegido: 0001\n",
+      "saldo via método: 150\n",
+      "--- tentando acessar o privado de fora ---\n",
+      "AttributeError: 'Conta' object has no attribute '__saldo'\n",
+      "--- name mangling (a 'quebra' possível) ---\n",
+      "c._Conta__saldo = 150 -> é proteção contra acidente, não segurança\n",
+      "atributos do objeto: ['_Conta__saldo', '_agencia', 'titular']\n"
+     ]
+    }
+   ],
+   "source": [
+    "class Conta:\n",
+    "    def __init__(self, titular, saldo=0.0):\n",
+    "        self.titular = titular      # público\n",
+    "        self._agencia = \"0001\"      # protegido (convenção)\n",
+    "        self.__saldo = saldo        # privado -> vira _Conta__saldo\n",
+    "\n",
+    "    def depositar(self, valor):\n",
+    "        if valor > 0:\n",
+    "            self.__saldo += valor\n",
+    "\n",
+    "    def ver_saldo(self):            # acesso controlado pelo método\n",
+    "        return self.__saldo\n",
+    "\n",
+    "\n",
+    "c = Conta(\"Ana\", 100)\n",
+    "print(\"público :\", c.titular)\n",
+    "print(\"protegido:\", c._agencia)\n",
+    "c.depositar(50)\n",
+    "print(\"saldo via método:\", c.ver_saldo())\n",
+    "\n",
+    "print(\"--- tentando acessar o privado de fora ---\")\n",
+    "try:\n",
+    "    print(c.__saldo)\n",
+    "except AttributeError as e:\n",
+    "    print(\"AttributeError:\", e)\n",
+    "\n",
+    "print(\"--- name mangling (a 'quebra' possível) ---\")\n",
+    "print(\"c._Conta__saldo =\", getattr(c, \"_Conta__saldo\"), \"-> é proteção contra acidente, não segurança\")\n",
+    "print(\"atributos do objeto:\", sorted(vars(c)))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1747738f",
+   "metadata": {},
+   "source": [
+    "### Getters e Setters com `@property`\n",
+    "\n",
+    "O decorator `@property` transforma um **método** em um **atributo de acesso controlado**:\n",
+    "quem usa a classe escreve `conta.saldo` (sem parênteses), mas por trás roda o getter —\n",
+    "e a validação continua escondida.\n",
+    "\n",
+    "- `@property` → define o **getter**.\n",
+    "- `@nome.setter` → define o **setter** (validação entra aqui).\n",
+    "- Só com getter → atributo **somente leitura**."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "id": "e8d6646c",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.522675Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.522482Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.527469Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.526878Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Ana: R$ 100.00\n",
+      "depois do setter: Ana: R$ 250.00\n",
+      "ValueError: Saldo não pode ser negativo!\n",
+      "AttributeError: property 'resumo' of 'ContaSegura' object has no setter\n"
+     ]
+    }
+   ],
+   "source": [
+    "class ContaSegura:\n",
+    "    def __init__(self, titular, saldo=0.0):\n",
+    "        self.titular = titular\n",
+    "        self.saldo = saldo          # passa pelo setter (validação já na criação)\n",
+    "\n",
+    "    @property\n",
+    "    def saldo(self):                # GETTER\n",
+    "        return self._saldo\n",
+    "\n",
+    "    @saldo.setter\n",
+    "    def saldo(self, valor):         # SETTER com validação\n",
+    "        if valor < 0:\n",
+    "            raise ValueError(\"Saldo não pode ser negativo!\")\n",
+    "        self._saldo = valor\n",
+    "\n",
+    "    @property\n",
+    "    def resumo(self):               # property SOMENTE LEITURA (não tem setter)\n",
+    "        return f\"{self.titular}: R$ {self._saldo:.2f}\"\n",
+    "\n",
+    "\n",
+    "conta = ContaSegura(\"Ana\", 100)\n",
+    "print(conta.resumo)\n",
+    "\n",
+    "conta.saldo = 250\n",
+    "print(\"depois do setter:\", conta.resumo)\n",
+    "\n",
+    "try:\n",
+    "    conta.saldo = -50\n",
+    "except ValueError as e:\n",
+    "    print(\"ValueError:\", e)\n",
+    "\n",
+    "try:\n",
+    "    setattr(conta, \"resumo\", \"hack\")\n",
+    "except AttributeError as e:\n",
+    "    print(\"AttributeError:\", e)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "10c87d14",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## 4. Atributos de Classe, `@classmethod` e `@staticmethod`\n",
+    "\n",
+    "- **Atributo de classe**: declarado no *corpo da classe*, **fora** de qualquer método.\n",
+    "  É compartilhado por **todas** as instâncias (uma cópia só, acessível por `Classe.atributo`).\n",
+    "\n",
+    "- 🕳️ **Armadilha do mutável compartilhado**: se o atributo de classe for uma coleção mutável\n",
+    "  (lista, dicionário, set), ela é criada **uma única vez** e o estado **vaza entre os objetos**.\n",
+    "  Coleções mutáveis devem nascer **dentro do `__init__`** (aí cada instância tem a sua).\n",
+    "\n",
+    "### Comparando os decorators\n",
+    "\n",
+    "| Decorator | 1º parâmetro | Serve para | Chamada |\n",
+    "|-----------|--------------|-----------|---------|\n",
+    "| *(nenhum)* — método de instância | `self` | operar sobre **um objeto** | `obj.metodo()` |\n",
+    "| `@classmethod` | `cls` (a classe) | **construtores alternativos** / alterar dados da classe | `Classe.metodo()` |\n",
+    "| `@staticmethod` | nada | **função utilitária** agrupada por tema | `Classe.metodo()` |"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "aa84579a",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.529082Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.528891Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.532365Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.531773Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0\n",
+      "objetos criados: 3 | visto pela instância: 3\n"
+     ]
+    }
+   ],
+   "source": [
+    "class Contador:\n",
+    "    total = 0                       # atributo de CLASSE (compartilhado)\n",
+    "\n",
+    "    def __init__(self, nome):\n",
+    "        self.nome = nome\n",
+    "        Contador.total += 1         # incrementa o contador global da classe\n",
+    "\n",
+    "\n",
+    "print(Contador.total)\n",
+    "a, b, c = Contador(\"A\"), Contador(\"B\"), Contador(\"C\")\n",
+    "print(\"objetos criados:\", Contador.total, \"| visto pela instância:\", a.total)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "0eef4bbf",
+   "metadata": {},
+   "source": [
+    "### 🕳️ Demonstração da armadilha do mutável compartilhado"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "f40668d6",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.533990Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.533858Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.538050Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.537401Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "ERRADO -> e1.alunos = ['Ana']\n",
+      "ERRADO -> e2.alunos = ['Ana']  <-- vazou estado entre objetos!\n",
+      "é a mesma lista? True\n",
+      "\n",
+      "CERTO  -> c1.alunos = ['Ana']\n",
+      "CERTO  -> c2.alunos = []  <-- independentes, como deve ser\n"
+     ]
+    }
+   ],
+   "source": [
+    "class TurmaErrada:\n",
+    "    alunos = []             # ❌ criada UMA vez no corpo da classe: compartilhada!\n",
+    "\n",
+    "\n",
+    "class TurmaCerta:\n",
+    "    def __init__(self):\n",
+    "        self.alunos = []    # ✅ nasce dentro do __init__: uma por objeto\n",
+    "\n",
+    "\n",
+    "e1, e2 = TurmaErrada(), TurmaErrada()\n",
+    "e1.alunos.append(\"Ana\")\n",
+    "print(\"ERRADO -> e1.alunos =\", e1.alunos)\n",
+    "print(\"ERRADO -> e2.alunos =\", e2.alunos, \" <-- vazou estado entre objetos!\")\n",
+    "print(\"é a mesma lista?\", e1.alunos is e2.alunos)\n",
+    "\n",
+    "c1, c2 = TurmaCerta(), TurmaCerta()\n",
+    "c1.alunos.append(\"Ana\")\n",
+    "print(\"\\nCERTO  -> c1.alunos =\", c1.alunos)\n",
+    "print(\"CERTO  -> c2.alunos =\", c2.alunos, \" <-- independentes, como deve ser\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d34902f4",
+   "metadata": {},
+   "source": [
+    "### `@classmethod` — construtor alternativo (método de fábrica)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "id": "bc467f31",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.539593Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.539445Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.544986Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.544395Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "30/09/2026 | 30/09/2026 | iguais? True\n",
+      "depois de alterar o formato: 2026-09-30\n",
+      "formato da classe agora: %Y-%m-%d\n"
+     ]
+    }
+   ],
+   "source": [
+    "from datetime import date\n",
+    "\n",
+    "\n",
+    "class Data:\n",
+    "    formato = \"%d/%m/%Y\"\n",
+    "\n",
+    "    def __init__(self, dia, mes, ano):\n",
+    "        self.dia, self.mes, self.ano = dia, mes, ano\n",
+    "\n",
+    "    @classmethod\n",
+    "    def de_iso(cls, texto):                # construtor ALTERNATIVO\n",
+    "        ano, mes, dia = (int(x) for x in texto.split(\"-\"))\n",
+    "        return cls(dia, mes, ano)          # cls = a própria classe\n",
+    "\n",
+    "    @classmethod\n",
+    "    def alterar_formato(cls, novo):        # altera dado da CLASSE\n",
+    "        cls.formato = novo\n",
+    "\n",
+    "    def __str__(self):\n",
+    "        return date(self.ano, self.mes, self.dia).strftime(self.formato)\n",
+    "\n",
+    "\n",
+    "d1 = Data(30, 9, 2026)\n",
+    "d2 = Data.de_iso(\"2026-09-30\")             # chamado na CLASSE, sem instância pronta\n",
+    "print(d1, \"|\", d2, \"| iguais?\", str(d1) == str(d2))\n",
+    "\n",
+    "Data.alterar_formato(\"%Y-%m-%d\")\n",
+    "print(\"depois de alterar o formato:\", d1)\n",
+    "print(\"formato da classe agora:\", Data.formato)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "19d156db",
+   "metadata": {},
+   "source": [
+    "### `@staticmethod` — função utilitária dentro da classe\n",
+    "\n",
+    "Não recebe `self` nem `cls`. Está ali apenas por **organização temática** (poderia ser uma função\n",
+    "solta no módulo)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "43424396",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.546493Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.546339Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.549998Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.549445Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "True\n",
+      "False\n",
+      "8.33\n"
+     ]
+    }
+   ],
+   "source": [
+    "class Validador:\n",
+    "    @staticmethod\n",
+    "    def cpf_formato_ok(cpf):               # não usa self nem cls\n",
+    "        return len([d for d in cpf if d.isdigit()]) == 11\n",
+    "\n",
+    "    @staticmethod\n",
+    "    def media(notas):\n",
+    "        return sum(notas) / len(notas) if notas else 0\n",
+    "\n",
+    "\n",
+    "print(Validador.cpf_formato_ok(\"123.456.789-01\"))\n",
+    "print(Validador.cpf_formato_ok(\"123.456\"))\n",
+    "print(round(Validador.media([7, 8, 10]), 2))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "aa50ac9e",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## 5. Relacionamentos entre Classes\n",
+    "\n",
+    "| Aspecto | **Agregação** | **Composição** |\n",
+    "|---------|---------------|----------------|\n",
+    "| Relação | \"todo/parte\" fraca = **posse** | \"todo/parte\" forte = **criação** |\n",
+    "| Ciclo de vida | a parte **existe independente** do todo | a parte **não sobrevive** sem o todo |\n",
+    "| Quem cria a parte | vem **de fora** (passada ao todo) | o **todo cria** a parte internamente |\n",
+    "| UML | **losango ABERTO** (vazado) na ponta do \"todo\" | **losango FECHADO** (preenchido) |\n",
+    "| Exemplo | Departamento ↔ Professor | Pedido ↔ ItemPedido / Carro ↔ Motor |\n",
+    "\n",
+    "💡 Dica de prova: pergunte *\"se eu destruir o todo, a parte continua existindo?\"* → **sim = agregação**, **não = composição**."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "06cf745e",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.551437Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.551311Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.555262Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.554621Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Professores do depto: ['Ana']\n",
+      "Professor continua existindo? -> Ana\n"
+     ]
+    }
+   ],
+   "source": [
+    "# ---------- AGREGAÇÃO: losango aberto ----------\n",
+    "class Professor:\n",
+    "    def __init__(self, nome):\n",
+    "        self.nome = nome\n",
+    "\n",
+    "\n",
+    "class Departamento:\n",
+    "    def __init__(self, nome):\n",
+    "        self.nome = nome\n",
+    "        self.professores = []                  # recebe objetos prontos de fora\n",
+    "\n",
+    "    def contratar(self, professor):\n",
+    "        self.professores.append(professor)     # POSSE, não criação\n",
+    "\n",
+    "\n",
+    "prof = Professor(\"Ana\")                        # o professor existe por conta própria\n",
+    "dep = Departamento(\"Computação\")\n",
+    "dep.contratar(prof)\n",
+    "\n",
+    "print(\"Professores do depto:\", [p.nome for p in dep.professores])\n",
+    "del dep                                        # destruindo o \"todo\"\n",
+    "print(\"Professor continua existindo? ->\", prof.nome)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "id": "c4981989",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.556837Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.556691Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.561124Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.560413Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Itens: ['Teclado', 'Mouse']\n",
+      "Total: R$ 230.0\n",
+      "Neste modelo, o Pedido cria os ItemPedido internamente -> composição\n"
+     ]
+    }
+   ],
+   "source": [
+    "# ---------- COMPOSIÇÃO: losango fechado ----------\n",
+    "class ItemPedido:\n",
+    "    def __init__(self, descricao, preco):\n",
+    "        self.descricao = descricao\n",
+    "        self.preco = preco\n",
+    "\n",
+    "\n",
+    "class Pedido:\n",
+    "    def __init__(self, numero):\n",
+    "        self.numero = numero\n",
+    "        self.itens = []\n",
+    "\n",
+    "    def adicionar(self, descricao, preco):\n",
+    "        item = ItemPedido(descricao, preco)    # o TODO CRIA A PARTE (por dentro!)\n",
+    "        self.itens.append(item)\n",
+    "\n",
+    "    @property\n",
+    "    def total(self):\n",
+    "        return sum(i.preco for i in self.itens)\n",
+    "\n",
+    "\n",
+    "pedido = Pedido(101)\n",
+    "pedido.adicionar(\"Teclado\", 150.0)\n",
+    "pedido.adicionar(\"Mouse\", 80.0)\n",
+    "\n",
+    "print(\"Itens:\", [i.descricao for i in pedido.itens])\n",
+    "print(\"Total: R$\", pedido.total)\n",
+    "print(\"Neste modelo, o Pedido cria os ItemPedido internamente -> composição\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "cee88bc4",
+   "metadata": {},
+   "source": [
+    "> **Observação de prova:** em Python existe *garbage collector*, então a parte não \"morre\" com um\n",
+    "> `del` explícito se alguém ainda referencia-la. A diferença agregação x composição está no\n",
+    "> **modelo conceitual** (UML): **quem cria** a parte e **se ela depende** do todo — não no operador\n",
+    "> `del`."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "669a717f",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## 6. Herança e o Problema do Diamante\n",
+    "\n",
+    "- **Herança**: a subclasse **herda** atributos e métodos da(s) classe(s) base (\"é um\").\n",
+    "- **`super()`**: acessa a implementação da classe **pai** (não repita código herdado).\n",
+    "- **Herança múltipla**: a subclasse herda de **mais de uma** classe base ao mesmo tempo.\n",
+    "\n",
+    "### Problema do Diamante\n",
+    "\n",
+    "Quando duas superclasses possuem **métodos com o mesmo nome** (ex.: `A` no topo, `B` e `C` herdando\n",
+    "de `A`, e `D` herdando de `B` e `C` — o desenho forma um losango/diamante), a dúvida é:\n",
+    "**qual método executa?**\n",
+    "\n",
+    "O Python resolve com o **MRO (Method Resolution Order)**, calculado pela *linearização C3*:\n",
+    "a prioridade vai da **esquerda para a direita** na declaração `class D(B, C)`.\n",
+    "Você inspeciona com `Classe.__mro__` (ou `Classe.mro()`)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "8b17f79a",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.562550Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.562414Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.566119Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.565526Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Rex: Woof!\n",
+      "Tom: Miau!\n"
+     ]
+    }
+   ],
+   "source": [
+    "class Animal:\n",
+    "    def __init__(self, nome):\n",
+    "        self.nome = nome\n",
+    "\n",
+    "    def falar(self):\n",
+    "        return \"...\"\n",
+    "\n",
+    "\n",
+    "class Cachorro(Animal):              # herança simples\n",
+    "    def falar(self):                 # SOBRESCRITA (overriding)\n",
+    "        return \"Woof!\"\n",
+    "\n",
+    "\n",
+    "class Gato(Animal):\n",
+    "    def falar(self):\n",
+    "        return \"Miau!\"\n",
+    "\n",
+    "\n",
+    "for bicho in (Cachorro(\"Rex\"), Gato(\"Tom\")):\n",
+    "    print(f\"{bicho.nome}: {bicho.falar()}\")   # mesmo método, comportamentos diferentes"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9911eb9a",
+   "metadata": {},
+   "source": [
+    "### O diamante na prática"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "id": "dacea7fc",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.567453Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.567328Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.571775Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.571190Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "MRO de D: ['D', 'B', 'C', 'A', 'object']\n",
+      "Chamada de D().quem(): D -> B -> C -> A\n",
+      "\n",
+      "Leitura: procura por D, depois B (esquerda), depois C (direita), depois A, depois object.\n",
+      "O super() de B NÃO vai direto para A: ele vai para o próximo da fila -> C.\n"
+     ]
+    }
+   ],
+   "source": [
+    "class A:\n",
+    "    def quem(self):\n",
+    "        return \"A\"\n",
+    "\n",
+    "\n",
+    "class B(A):\n",
+    "    def quem(self):\n",
+    "        return \"B -> \" + super().quem()      # super() segue o MRO!\n",
+    "\n",
+    "\n",
+    "class C(A):\n",
+    "    def quem(self):\n",
+    "        return \"C -> \" + super().quem()\n",
+    "\n",
+    "\n",
+    "class D(B, C):                               # herança múltipla\n",
+    "    def quem(self):\n",
+    "        return \"D -> \" + super().quem()\n",
+    "\n",
+    "\n",
+    "print(\"MRO de D:\", [c.__name__ for c in D.__mro__])\n",
+    "print(\"Chamada de D().quem():\", D().quem())\n",
+    "print()\n",
+    "print(\"Leitura: procura por D, depois B (esquerda), depois C (direita), depois A, depois object.\")\n",
+    "print(\"O super() de B NÃO vai direto para A: ele vai para o próximo da fila -> C.\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "950c3428",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## 7. Polimorfismo e Injeção de Dependência\n",
+    "\n",
+    "**Polimorfismo** = objetos de classes **diferentes** respondem à **mesma chamada de método**,\n",
+    "cada um com o seu comportamento. Em Python isso é natural (*duck typing*): se tem `area()`, serve —\n",
+    "não importa de quem herdou.\n",
+    "\n",
+    "- **Sobrescrita de método (*overriding*)**: a subclasse reescreve a implementação de um método herdado.\n",
+    "  (Diferente de *overloading*, que em Python não existe do jeito de Java — usar valor padrão ou `*args`.)\n",
+    "\n",
+    "**Injeção de Dependência (DI)**: em vez de a classe **criar** as suas dependências por dentro, ela\n",
+    "**recebe** objetos prontos (tipicamente pelo `__init__`). Resultado: **menos acoplamento** e\n",
+    "facilidade de trocar/testar peças."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "id": "094a5651",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.573208Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.573073Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.577726Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.577116Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Circulo    -> área = 12.57\n",
+      "Retangulo  -> área = 12.00\n",
+      "Quadrado   -> área = 25.00\n",
+      "\n",
+      "Uma única função serve para todas (POLIMORFISMO):\n",
+      "Circulo: 12.6, Retangulo: 12.0, Quadrado: 25.0\n"
+     ]
+    }
+   ],
+   "source": [
+    "class Circulo:\n",
+    "    def __init__(self, raio):\n",
+    "        self.raio = raio\n",
+    "\n",
+    "    def area(self):\n",
+    "        return 3.14159 * self.raio ** 2\n",
+    "\n",
+    "\n",
+    "class Retangulo:\n",
+    "    def __init__(self, base, altura):\n",
+    "        self.base, self.altura = base, altura\n",
+    "\n",
+    "    def area(self):\n",
+    "        return self.base * self.altura\n",
+    "\n",
+    "\n",
+    "class Quadrado:\n",
+    "    def __init__(self, lado):\n",
+    "        self.lado = lado\n",
+    "\n",
+    "    def area(self):\n",
+    "        return self.lado ** 2\n",
+    "\n",
+    "\n",
+    "formas = [Circulo(2), Retangulo(3, 4), Quadrado(5)]\n",
+    "for f in formas:\n",
+    "    print(f\"{type(f).__name__:<10} -> área = {f.area():.2f}\")\n",
+    "\n",
+    "print(\"\\nUma única função serve para todas (POLIMORFISMO):\")\n",
+    "def relatorio(objetos):\n",
+    "    return \", \".join(f\"{type(o).__name__}: {o.area():.1f}\" for o in objetos)\n",
+    "\n",
+    "print(relatorio(formas))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "4e8531fe",
+   "metadata": {},
+   "source": [
+    "### Injeção de Dependência: acoplado x desacoplado"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "id": "76bae36c",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.579112Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.578947Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.584212Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.583527Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[E-MAIL] para Ana: Seu pedido foi confirmado\n",
+      "\n",
+      "Pedido de Bruno processado.\n",
+      "[E-MAIL] para Bruno: Seu pedido foi confirmado\n",
+      "\n",
+      "Pedido de Carla processado.\n",
+      "[SMS]    para Carla: Seu pedido foi confirmado\n",
+      "Pedido de Diego processado.\n",
+      "\n",
+      "Teste automatizado -> mensagens registradas: [('Diego', 'Seu pedido foi confirmado')]\n"
+     ]
+    }
+   ],
+   "source": [
+    "class EmailService:\n",
+    "    def enviar(self, destino, msg):\n",
+    "        print(f\"[E-MAIL] para {destino}: {msg}\")\n",
+    "\n",
+    "\n",
+    "class SmsService:\n",
+    "    def enviar(self, destino, msg):\n",
+    "        print(f\"[SMS]    para {destino}: {msg}\")\n",
+    "\n",
+    "\n",
+    "# ❌ SEM injeção: a classe decide tudo, impossível trocar sem editar o código\n",
+    "class PedidoAcoplado:\n",
+    "    def finalizar(self, cliente):\n",
+    "        EmailService().enviar(cliente, \"Seu pedido foi confirmado\")\n",
+    "\n",
+    "\n",
+    "# ✅ COM injeção: a dependência chega de fora pelo __init__ (injeção por construtor)\n",
+    "class PedidoService:\n",
+    "    def __init__(self, notificador):\n",
+    "        self.notificador = notificador          # depende de uma ABSTRAÇÃO (basta ter .enviar)\n",
+    "\n",
+    "    def finalizar(self, cliente):\n",
+    "        print(f\"Pedido de {cliente} processado.\")\n",
+    "        self.notificador.enviar(cliente, \"Seu pedido foi confirmado\")\n",
+    "\n",
+    "\n",
+    "PedidoAcoplado().finalizar(\"Ana\")\n",
+    "print()\n",
+    "PedidoService(EmailService()).finalizar(\"Bruno\")     # troca o canal...\n",
+    "print()\n",
+    "PedidoService(SmsService()).finalizar(\"Carla\")       # ...sem tocar em PedidoService\n",
+    "\n",
+    "\n",
+    "class NotificadorFake:                                # ótimo para testar\n",
+    "    def __init__(self):\n",
+    "        self.enviados = []\n",
+    "\n",
+    "    def enviar(self, destino, msg):\n",
+    "        self.enviados.append((destino, msg))\n",
+    "\n",
+    "\n",
+    "fake = NotificadorFake()\n",
+    "PedidoService(fake).finalizar(\"Diego\")\n",
+    "print(\"\\nTeste automatizado -> mensagens registradas:\", fake.enviados)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "10f6b7a8",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## 8. Classes e Métodos Abstratos\n",
+    "\n",
+    "- **Classe abstrata** define um **contrato**: um conjunto de métodos que as subclasses\n",
+    "  **obrigatoriamente** devem implementar. Ela é um \"molde incompleto\".\n",
+    "- ❌ **Não pode ser instanciada diretamente** — só serve de base para herança.\n",
+    "- Em Python usa-se o módulo **`abc`**:\n",
+    "\n",
+    "```python\n",
+    "from abc import ABC, abstractmethod\n",
+    "\n",
+    "class Forma(ABC):\n",
+    "    @abstractmethod\n",
+    "    def area(self): ...\n",
+    "```\n",
+    "\n",
+    "- Se uma subclasse **não implementar** todos os métodos abstratos, ela também não pode ser\n",
+    "  instanciada (o Python avisa na hora da criação).\n",
+    "\n",
+    "### Notação UML\n",
+    "\n",
+    "- Nome da **classe abstrata** e dos **métodos abstratos** em ***itálico***.\n",
+    "- A **herança de uma classe abstrata** usa uma linha **contínua** com seta de ponta aberta.\n",
+    "  Linha tracejada com seta de ponta aberta é usada para realização de interface/contrato."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "id": "09cfc10d",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.585618Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.585432Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.589563Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.588922Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Tentando instanciar a classe abstrata:\n",
+      "TypeError: Can't instantiate abstract class Forma without an implementation for abstract methods 'area', 'perimetro'\n"
+     ]
+    }
+   ],
+   "source": [
+    "from abc import ABC, abstractmethod\n",
+    "\n",
+    "\n",
+    "class Forma(ABC):                        # classe abstrata\n",
+    "    def __init__(self, nome):\n",
+    "        self.nome = nome\n",
+    "\n",
+    "    @abstractmethod\n",
+    "    def area(self):                      # CONTRATO: quem herdar deve implementar\n",
+    "        ...\n",
+    "\n",
+    "    @abstractmethod\n",
+    "    def perimetro(self):\n",
+    "        ...\n",
+    "\n",
+    "    def descricao(self):                 # método concreto: já pronto para usar\n",
+    "        return f\"{self.nome}: área={self.area():.2f}, perímetro={self.perimetro():.2f}\"\n",
+    "\n",
+    "\n",
+    "print(\"Tentando instanciar a classe abstrata:\")\n",
+    "try:\n",
+    "    f = Forma(\"genérica\")  # type: ignore[abstract]\n",
+    "except TypeError as e:\n",
+    "    print(\"TypeError:\", e)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "id": "f472e89b",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.591405Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.591249Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.596668Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.595918Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Quadrado: área=9.00, perímetro=12.00\n",
+      "Círculo: área=3.14, perímetro=6.28\n",
+      "QuadradoForma é uma Forma? True\n",
+      "\n",
+      "Subclasse que NÃO cumpre o contrato:\n",
+      "TypeError: Can't instantiate abstract class Incompleta without an implementation for abstract method 'perimetro'\n"
+     ]
+    }
+   ],
+   "source": [
+    "class QuadradoForma(Forma):\n",
+    "    def __init__(self, lado):\n",
+    "        super().__init__(\"Quadrado\")\n",
+    "        self.lado = lado\n",
+    "\n",
+    "    def area(self):\n",
+    "        return self.lado ** 2\n",
+    "\n",
+    "    def perimetro(self):\n",
+    "        return 4 * self.lado\n",
+    "\n",
+    "\n",
+    "class CirculoForma(Forma):\n",
+    "    def __init__(self, raio):\n",
+    "        super().__init__(\"Círculo\")\n",
+    "        self.raio = raio\n",
+    "\n",
+    "    def area(self):\n",
+    "        return 3.14159 * self.raio ** 2\n",
+    "\n",
+    "    def perimetro(self):\n",
+    "        return 2 * 3.14159 * self.raio\n",
+    "\n",
+    "\n",
+    "print(QuadradoForma(3).descricao())\n",
+    "print(CirculoForma(1).descricao())\n",
+    "print(\"QuadradoForma é uma Forma?\", isinstance(QuadradoForma(3), Forma))\n",
+    "\n",
+    "print(\"\\nSubclasse que NÃO cumpre o contrato:\")\n",
+    "class Incompleta(Forma):\n",
+    "    def area(self):\n",
+    "        return 0\n",
+    "    # faltou perimetro()\n",
+    "\n",
+    "try:\n",
+    "    Incompleta(\"incompleta\")  # type: ignore[abstract]\n",
+    "except TypeError as e:\n",
+    "    print(\"TypeError:\", e)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b07f0e25",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## 9. 🧠 Cola rápida e pegadinhas clássicas de prova\n",
+    "\n",
+    "### Dunders que costumam cair\n",
+    "\n",
+    "| Dunder | Quando roda | Observação |\n",
+    "|--------|-------------|------------|\n",
+    "| `__new__(cls)` | antes de tudo, na criação | aloca memória, retorna a instância |\n",
+    "| `__init__(self)` | na criação | inicializa atributos (\"construtor\") |\n",
+    "| `__str__` | `print(obj)`, `str(obj)` | versão \"bonita\", para leitura |\n",
+    "| `__repr__` | `repr(obj)`, no interpretador | versão técnica / debug |\n",
+    "| `__mro__` | consulta | ordem de resolução de métodos |\n",
+    "| `__dict__` | consulta | atributos de instância |\n",
+    "| `__eq__`, `__len__` | `==`, `len()` | comportamentos especiais |\n",
+    "\n",
+    "### As 7 pegadinhas que mais derrubam\n",
+    "\n",
+    "1. `__new__` **aloca**, `__init__` **inicializa** — e `__init__` não cria o objeto.\n",
+    "2. `__privado` é **name mangling** (`_Classe__privado`), não segurança real.\n",
+    "3. Coleção mutável no **corpo da classe** → estado **compartilhado** entre objetos. Use `__init__`.\n",
+    "4. **Argumento padrão mutável** (`def f(x, lista=[])`) → a mesma lista persiste entre chamadas.\n",
+    "5. Herança múltipla: quem manda é o **MRO** (`Classe.__mro__`), esquerda → direita.\n",
+    "6. `super()` não é \"o pai da minha classe\", é **o próximo da fila do MRO**.\n",
+    "7. Classe abstrata **não instancia**; o erro é `TypeError: Can't instantiate abstract class`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "id": "ac77dc85",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.598488Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.598321Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.602554Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.601900Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "['arroz']\n",
+      "['arroz', 'feijão']\n",
+      "['arroz', 'feijão', 'macarrão']\n",
+      "\n",
+      "['arroz']\n",
+      "['feijão']\n"
+     ]
+    }
+   ],
+   "source": [
+    "# PEGADINHA 4 na prática: argumento padrão mutável\n",
+    "def adicionar_item_errado(item, carrinho=[]):     # ❌ o default é criado UMA vez\n",
+    "    carrinho.append(item)\n",
+    "    return carrinho\n",
+    "\n",
+    "\n",
+    "print(adicionar_item_errado(\"arroz\"))\n",
+    "print(adicionar_item_errado(\"feijão\"))            # 'arroz' ainda está lá!\n",
+    "print(adicionar_item_errado(\"macarrão\"))\n",
+    "\n",
+    "\n",
+    "def adicionar_item_certo(item, carrinho=None):    # ✅ cria uma lista nova a cada chamada\n",
+    "    if carrinho is None:\n",
+    "        carrinho = []\n",
+    "    carrinho.append(item)\n",
+    "    return carrinho\n",
+    "\n",
+    "\n",
+    "print()\n",
+    "print(adicionar_item_certo(\"arroz\"))\n",
+    "print(adicionar_item_certo(\"feijão\"))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "id": "69d1e38e",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-09-30T10:18:47.604572Z",
+     "iopub.status.busy": "2026-09-30T10:18:47.604349Z",
+     "iopub.status.idle": "2026-09-30T10:18:47.609400Z",
+     "shell.execute_reply": "2026-09-30T10:18:47.608694Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "MRO: ['D', 'B', 'C', 'A', 'object']\n",
+      "Cadeia executada: ['D', 'B', 'C', 'A']\n",
+      "Repare: A aparece UMA vez, e C entra antes de A mesmo B não mencionando C.\n"
+     ]
+    }
+   ],
+   "source": [
+    "# PEGADINHA 6 na prática: super() segue o MRO completo\n",
+    "class A:\n",
+    "    def registrar(self):\n",
+    "        return [\"A\"]\n",
+    "\n",
+    "\n",
+    "class B(A):\n",
+    "    def registrar(self):\n",
+    "        return [\"B\"] + super().registrar()\n",
+    "\n",
+    "\n",
+    "class C(A):\n",
+    "    def registrar(self):\n",
+    "        return [\"C\"] + super().registrar()\n",
+    "\n",
+    "\n",
+    "class D(B, C):\n",
+    "    def registrar(self):\n",
+    "        return [\"D\"] + super().registrar()\n",
+    "\n",
+    "\n",
+    "print(\"MRO:\", [c.__name__ for c in D.__mro__])\n",
+    "print(\"Cadeia executada:\", D().registrar())\n",
+    "print(\"Repare: A aparece UMA vez, e C entra antes de A mesmo B não mencionando C.\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "68847002",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## 10. 📝 Simulado rápido\n",
+    "\n",
+    "Responda mentalmente (ou escreva num papel) antes de olhar o gabarito:\n",
+    "\n",
+    "1. Qual a diferença entre **classe** e **objeto**?\n",
+    "2. Quem **aloca a memória**: `__new__` ou `__init__`?\n",
+    "3. O que significa `self.__saldo` na prática, depois da compilação do nome?\n",
+    "4. Para que serve o `@property` em relação ao encapsulamento?\n",
+    "5. Por que declarar `itens = []` no corpo da classe é um erro de projeto? Onde deve ficar?\n",
+    "6. Diferencie `@classmethod` de `@staticmethod` (primeiro parâmetro e uso típico).\n",
+    "7. **Agregação** x **composição**: qual usa losango fechado no UML? Cite um exemplo de cada.\n",
+    "8. Em `class D(B, C)`, se `B` e `C` têm um método com o mesmo nome, qual executa? Como o Python decide?\n",
+    "9. O que é **polimorfismo**? E o que é **injeção de dependência** (cite o benefício)?\n",
+    "10. Por que uma classe que herda de `ABC` e não implementa um `@abstractmethod` não pode ser instanciada?"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8ffa7747",
+   "metadata": {},
+   "source": [
+    "<details>\n",
+    "<summary><b>👀 GABARITO — clique para abrir</b></summary>\n",
+    "\n",
+    "1. **Classe** é o molde/especificação (atributos + métodos); **objeto** é a instância criada em\n",
+    "   tempo de execução, com valores próprios.\n",
+    "2. **`__new__`** aloca a memória e devolve a instância; o `__init__` apenas inicializa os atributos.\n",
+    "3. Vira `_Classe__saldo` (**name mangling**): esconde o nome, mas não impede o acesso — é convenção.\n",
+    "4. Cria getters/setters que parecem atributos comuns (`obj.saldo`), permitindo **validar**\n",
+    "   e esconder a lógica de acesso, mantendo o encapsulamento.\n",
+    "5. Porque a lista é criada **uma só vez** e fica **compartilhada** por todas as instâncias (vaza\n",
+    "   estado). Deve ser criada **dentro do `__init__`**, em `self.itens = []`.\n",
+    "6. `@classmethod` recebe **`cls`** e serve para **construtores alternativos** / mexer em dados da\n",
+    "   classe; `@staticmethod` não recebe `self` nem `cls`, é **função utilitária** agrupada por tema.\n",
+    "7. **Composição** usa losango **fechado** (parte criada pelo todo, não sobrevive sem ele — ex.:\n",
+    "   Pedido/ItemPedido). Agregação usa losango **aberto** (partes independentes — ex.: Departamento/Professor).\n",
+    "8. Executa o da **classe mais à esquerda** na ordem do **MRO** (`D → B → C → A → object`), definido\n",
+    "   pela linearização C3 — verificável com `D.__mro__`.\n",
+    "9. **Polimorfismo**: classes diferentes respondendo à mesma chamada de método com comportamentos\n",
+    "   próprios. **Injeção de dependência**: receber as dependências de fora (via `__init__`) em vez de\n",
+    "   criá-las internamente → **menos acoplamento** e mais facilidade de testar/trocar implementações.\n",
+    "10. Porque ela **não cumpre o contrato**: continua abstrata, e o Python lança\n",
+    "    `TypeError: Can't instantiate abstract class ... with abstract method ...`.\n",
+    "\n",
+    "</details>\n",
+    "\n",
+    "---\n",
+    "\n",
+    "### ✅ Checklist de véspera\n",
+    "\n",
+    "- [ ] Sei escrever uma classe com `__init__`, atributos e métodos, e criar objetos.\n",
+    "- [ ] Sei explicar `public` / `_protegido` / `__privado` e fazer getter/setter com `@property`.\n",
+    "- [ ] Sei demonstrar a armadilha do mutável compartilhado (e como corrigir).\n",
+    "- [ ] Sei escrever um `@classmethod` de fábrica e um `@staticmethod` utilitário.\n",
+    "- [ ] Sei diferenciar agregação de composição e desenhar os losangos no UML.\n",
+    "- [ ] Sei explicar/consultar o MRO em herança múltipla.\n",
+    "- [ ] Sei implementar uma hierarquia com `ABC` + `@abstractmethod`.\n",
+    "- [ ] Sei escrever um exemplo de polimorfismo e um de injeção de dependência.\n",
+    "\n",
+    "**Boa prova! 🚀**"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "base",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.13.9"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
