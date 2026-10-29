@@ -54,6 +54,16 @@ class Quadrado(Forma):
     def __str__(self):
             return (f"O Quadrado tem uma área de {self.area()}cm² e um perimetro de {self.perimetro()}cm ")
 
+class Losangulo(Forma):
+
+    def __init__(self, lado: int, diagonalMaior: int, diagonalMenor: int):
+        self._lado = lado
+        self._diagonalMaior = diagonalMaior
+        self._diagonalMenor = diagonalMenor
+
+    def perimetro(self):
+        return (self._lado * 4)
+
 t1 = Triangulo(6, 8)
 print(t1)
 
@@ -62,3 +72,6 @@ print(r1)
 
 q1 = Quadrado(10)
 print(q1)
+
+l1 = Losangulo(6, 10, 5)
+print(l1)
