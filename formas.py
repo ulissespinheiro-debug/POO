@@ -35,7 +35,7 @@ class Retangulo(Forma):
         return (self._base * self._altura)
         
     def perimetro(self):
-        return (self._base * 4)
+        return (self._base * 2) + (self._altura * 2)
 
     def __str__(self):
         return (f"O Retângulo tem uma área de {self.area()}cm² e um perimetro de {self.perimetro()}cm ")
@@ -52,19 +52,13 @@ class Quadrado(Forma):
         return (self._lado * 4)
 
     def __str__(self):
-            return (f"O Retângulo tem uma área de {self.area()}cm² e um perimetro de {self.perimetro()}cm ")
+            return (f"O Quadrado tem uma área de {self.area()}cm² e um perimetro de {self.perimetro()}cm ")
 
 t1 = Triangulo(6, 8)
-t1.area()
-t1.perimetro()
 print(t1)
 
 r1 = Retangulo(10, 20)
-r1.area()
-r1.perimetro()
 print(r1)
 
 q1 = Quadrado(10)
-q1.area()
-q1.perimetro()
 print(q1)
